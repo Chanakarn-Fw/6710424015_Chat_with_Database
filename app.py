@@ -62,9 +62,12 @@ for msg in st.session_state.chat.history:
         st.markdown(msg.parts[0].text)
 
 # === CHAT INPUT ===
+def safe_text(text):
+    return text.encode('utf-8', 'ignore').decode('utf-8')
+
 if prompt := st.chat_input("\ud83d\udcac Ask Gemini something about your data..."):
     with st.chat_message("user"):
-        st.markdown(prompt)
+        st.markdown(safe_text(prompt))
 
     df = st.session_state.dataframe
     if df is not None:
@@ -113,7 +116,7 @@ Use `exec()` and save the final result in a variable called `ANSWER`.
                 if isinstance(answer, pd.DataFrame):
                     st.dataframe(answer)
                 else:
-                    st.markdown(f"**Result:** {answer}")
+                    st.markdown(f"**Result:** {safe_text(str(answer))}")
 
             # 4. Ask Gemini to summarize the result naturally
             explain_prompt = f"""
@@ -125,11 +128,11 @@ Summarize the result and include your opinion on the customer's persona based on
 """
             explanation = model.generate_content(explain_prompt)
             with st.chat_message("assistant"):
-                st.markdown(explanation.text)
+                st.markdown(safe_text(explanation.text))
 
             # 5. Save clean chat history (only prompt and summary, not code)
-            st.session_state.chat.history.append({"role": "user", "parts": [{"text": prompt}]})
-            st.session_state.chat.history.append({"role": "model", "parts": [{"text": str(answer)}]})
+            st.session_state.chat.history.append({"role": "user", "parts": [{"text": safe_text(prompt)}]})
+            st.session_state.chat.history.append({"role": "model", "parts": [{"text": safe_text(str(answer))}]})
 
         except Exception as e:
             st.error(f"\u274c Error executing or interpreting Gemini code: {e}")
