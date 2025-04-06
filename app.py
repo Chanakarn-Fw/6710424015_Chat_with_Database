@@ -115,11 +115,21 @@ if prompt := st.chat_input("Ask me anything about your data..."):
             query_result = {df_name}[{df_name}['age'] > 30]
             """
   
-             response = model.generate_content(system_prompt + "\n\n" + prompt)
-             answer = response.text
+             response = model.generate_content(prompt)
+             to_markdown(response.text)
+             
+             query = response.text.replace("```", "#")
+             exec(query)
   
              st.session_state.chat_history.append(("assistant", answer))
              st.chat_message("assistant").markdown(answer)
+
+             explain_the_results = f'''
+             the user asked {question},
+             here is the results {ANSWER}
+             answer the question and summarize the answer,
+             include your opinions of the persona of this customer
+             '''
   
          except Exception as e:
              st.error(f"⚠️ Error generating response: {e}")
