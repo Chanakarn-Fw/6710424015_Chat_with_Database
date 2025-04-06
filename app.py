@@ -66,15 +66,16 @@ if prompt := st.chat_input("💬 Ask Gemini something about your data..."):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Add context
     df = st.session_state.dataframe
     if df is not None:
-        sample = df.head(2).to_string()
-        stats = df.describe(include="all").to_string()
-        dict_text = st.session_state.dictionary or "No dictionary provided."
-        df_name = "csv_data"
+        try:
+            sample = df.head(2).to_string()
+            stats = df.describe(include="all").to_string()
+            dict_text = st.session_state.dictionary or "No dictionary provided."
+            df_name = "csv_data"
 
-        full_prompt = f"""
+            # 1. สร้างคำสั่งเพื่อให้ Gemini สร้างโค้ด Python
+            full_prompt = f"""
 You are a Python data assistant.
 You will be given:
 1. A pandas DataFrame called `{df_name}` already loaded in memory.
@@ -98,17 +99,16 @@ Do NOT explain the code.
 Use `exec()` and save the final result in a variable called `ANSWER`.
 """
 
-        try:
-            # Send prompt to Gemini to generate code
+            # 2. ส่งคำสั่งให้ Gemini สร้างโค้ด
             csv_data = df.copy()
             response = st.session_state.chat.send_message(full_prompt)
             generated_code = response.text.replace("```python", "").replace("```", "").strip()
 
-            # Run the generated code safely
+            # 3. รันโค้ดใน exec() (ไม่แสดงโค้ดให้ user เห็น)
             local_vars = {"csv_data": csv_data}
             exec(textwrap.dedent(generated_code), {}, local_vars)
 
-            # Extract and display the answer
+            # 4. ดึงผลลัพธ์จากตัวแปร ANSWER
             answer = local_vars.get("ANSWER", "No result found.")
             with st.chat_message("assistant"):
                 if isinstance(answer, pd.DataFrame):
@@ -116,16 +116,15 @@ Use `exec()` and save the final result in a variable called `ANSWER`.
                 else:
                     st.markdown(f"**Result:** {answer}")
 
-            # Ask Gemini to summarize the result in natural language
-            explain_the_results = f"""
+            # 5. สร้าง prompt ใหม่ให้ Gemini อธิบายผล
+            explain_prompt = f"""
 The user asked: {prompt}
 Here is the result: {answer}
 
 Now, explain the answer clearly.
 Summarize the result and include your opinion on the customer's persona based on the data.
 """
-
-            explanation = st.session_state.chat.send_message(explain_the_results)
+            explanation = st.session_state.chat.send_message(explain_prompt)
             with st.chat_message("assistant"):
                 st.markdown(explanation.text)
 
@@ -134,4 +133,3 @@ Summarize the result and include your opinion on the customer's persona based on
 
     else:
         st.warning("⚠️ Please upload a CSV file to get started.")
-
