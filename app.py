@@ -75,53 +75,53 @@ if prompt := st.chat_input("Ask me anything about your data..."):
             dict_info = st.session_state.dictionary or "No dictionary provided."
  
             
-prompt = f"""
-You are a helpful Python code generator.
-Your goal is to write Python code snippets based on the user's question
-and the provided DataFrame information.
+            system_prompt = f"""
+            You are a helpful Python code generator.
+            Your goal is to write Python code snippets based on the user's question
+            and the provided DataFrame information.
 
-Here's the context:
-
-**User Question:**
-{question}
-
-**DataFrame Name:**
-{df_name}
-
-**DataFrame Details:**
-{data_dict_text}
-
-**Sample Data (Top 2 Rows):**
-{example_record}
-
-**Instructions:**
-1. Write Python code that addresses the user's question by querying or manipulating the DataFrame.
-2. **Crucially, use the `exec()` function to execute the generated code.**
-3. Do not import pandas.
-4. Change date column type to datetime.
-5. **Store the result of the executed code in a variable named `ANSWER`.**
-   This variable should hold the answer to the user's question (e.g., a filtered DataFrame, a calculated value, etc.).
-6. Assume the DataFrame is already loaded into a pandas DataFrame object named `{df_name}`.
-7. Keep the generated code concise and focused on answering the question.
-8. If the question requires a specific output format (e.g., a list, a single value), ensure the `ANSWER` variable holds that format.
-
-**Example:**
-If the user asks: "Show me the rows where the 'age' column is greater than 30." 
-And the DataFrame has an 'age' column.
-
-The generated code should look like this (inside the `exec()` string):
-
-'''python
-query_result = {df_name}[{df_name}['age'] > 30]
-"""
- 
-            response = model.generate_content(system_prompt + "\n\n" + prompt)
-            answer = response.text
- 
-            st.session_state.chat_history.append(("assistant", answer))
-            st.chat_message("assistant").markdown(answer)
- 
-        except Exception as e:
-            st.error(f"⚠️ Error generating response: {e}")
+            Here's the context:
+            
+            **User Question:**
+            {question}
+            
+            **DataFrame Name:**
+            {df_name}
+            
+            **DataFrame Details:**
+            {data_dict_text}
+            
+            **Sample Data (Top 2 Rows):**
+            {example_record}
+            
+            **Instructions:**
+            1. Write Python code that addresses the user's question by querying or manipulating the DataFrame.
+            2. **Crucially, use the `exec()` function to execute the generated code.**
+            3. Do not import pandas.
+            4. Change date column type to datetime.
+            5. **Store the result of the executed code in a variable named `ANSWER`.**
+               This variable should hold the answer to the user's question (e.g., a filtered DataFrame, a calculated value, etc.).
+            6. Assume the DataFrame is already loaded into a pandas DataFrame object named `{df_name}`.
+            7. Keep the generated code concise and focused on answering the question.
+            8. If the question requires a specific output format (e.g., a list, a single value), ensure the `ANSWER` variable holds that format.
+            
+            **Example:**
+            If the user asks: "Show me the rows where the 'age' column is greater than 30." 
+            And the DataFrame has an 'age' column.
+            
+            The generated code should look like this (inside the `exec()` string):
+            
+            '''python
+            query_result = {df_name}[{df_name}['age'] > 30]
+            """
+  
+             response = model.generate_content(system_prompt + "\n\n" + prompt)
+             answer = response.text
+  
+             st.session_state.chat_history.append(("assistant", answer))
+             st.chat_message("assistant").markdown(answer)
+  
+         except Exception as e:
+             st.error(f"⚠️ Error generating response: {e}")
     else:
         st.warning("⚠️ Please upload a CSV file and enter a valid API key.")
