@@ -5,7 +5,7 @@ import textwrap
 
 # === CONFIG ===
 st.set_page_config(page_title="Gemini CSV Analyst", layout="wide")
-st.title("\ud83d\udcc8 CSV + Gemini: Ask Anything About Your Data")
+st.title("CSV + Gemini: Ask Anything About Your Data")
 st.caption("Upload a dataset, ask questions in natural language, and get real answers.")
 
 # === API SETUP ===
@@ -21,7 +21,7 @@ try:
         return "assistant" if role == "model" else role
 
 except Exception as e:
-    st.error(f"\u274c Error initializing Gemini: {e}")
+    st.error(f"Error initializing Gemini: {e}")
     st.stop()
 
 # === SESSION ===
@@ -31,7 +31,7 @@ if "dictionary" not in st.session_state:
     st.session_state.dictionary = None
 
 # === UPLOAD ===
-st.subheader("\ud83d\udcc5 Upload Your Dataset and Dictionary")
+st.subheader("Upload Your Dataset and Dictionary")
 data_file = st.file_uploader("Upload CSV Data", type=["csv"])
 dict_file = st.file_uploader("Upload Data Dictionary (CSV or TXT)", type=["csv", "txt"])
 
@@ -39,10 +39,10 @@ if data_file:
     try:
         df = pd.read_csv(data_file)
         st.session_state.dataframe = df
-        st.success("\u2705 Data loaded")
+        st.success("Data loaded")
         st.dataframe(df.head())
     except Exception as e:
-        st.error(f"\u274c Failed to read CSV: {e}")
+        st.error(f"Failed to read CSV: {e}")
 
 if dict_file:
     try:
@@ -52,9 +52,9 @@ if dict_file:
         else:
             dict_text = dict_file.read().decode("utf-8")
         st.session_state.dictionary = dict_text
-        st.success("\ud83d\udcd8 Dictionary loaded")
+        st.success("Dictionary loaded")
     except Exception as e:
-        st.error(f"\u274c Failed to read dictionary: {e}")
+        st.error(f"Failed to read dictionary: {e}")
 
 # === CHAT HISTORY LOOP ===
 for msg in st.session_state.chat.history:
@@ -65,7 +65,7 @@ for msg in st.session_state.chat.history:
 def safe_text(text):
     return text.encode('utf-8', 'ignore').decode('utf-8')
 
-if prompt := st.chat_input("\ud83d\udcac Ask Gemini something about your data..."):
+if prompt := st.chat_input("Ask Gemini something about your data..."):
     with st.chat_message("user"):
         st.markdown(safe_text(prompt))
 
@@ -97,7 +97,7 @@ You will be given:
 User question:
 {prompt}
 
-\ud83d\udc49 Generate only a Python code block that answers the question.
+Generate only a Python code block that answers the question.
 Do NOT explain the code.
 Use `exec()` and save the final result in a variable called `ANSWER`.
 """
@@ -135,7 +135,7 @@ Summarize the result and include your opinion on the customer's persona based on
             st.session_state.chat.history.append({"role": "model", "parts": [{"text": safe_text(str(answer))}]})
 
         except Exception as e:
-            st.error(f"\u274c Error executing or interpreting Gemini code: {e}")
+            st.error(f"Error executing or interpreting Gemini code: {e}")
 
     else:
-        st.warning("\u26a0\ufe0f Please upload a CSV file to get started.")
+        st.warning("Please upload a CSV file to get started.")
