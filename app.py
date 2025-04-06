@@ -134,7 +134,6 @@ The generated code should look like this (inside the `exec()` string):
 query_result = {df_name}[{df_name}['age'] > 30]
 """
 
- 
     try:
         # Send system+user message to Gemini
         response = st.session_state.chat.send_message(prompt)
