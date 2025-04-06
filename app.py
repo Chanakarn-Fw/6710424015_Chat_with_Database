@@ -13,10 +13,10 @@ try:
     key = st.secrets['gemini_api_key']
     genai.configure(api_key=key)
     model = genai.GenerativeModel('gemini-2.0-flash-lite')
-    
+
     if "chat" not in st.session_state:
         st.session_state.chat = model.start_chat(history=[])
-    
+
     def role_to_streamlit(role):
         return "assistant" if role == "model" else role
 
@@ -99,19 +99,16 @@ Use `exec()` and save the final result in a variable called `ANSWER`.
 """
 
         try:
-            # Send the prompt to Gemini
+            # Send prompt to Gemini to generate code
             csv_data = df.copy()
             response = st.session_state.chat.send_message(full_prompt)
             generated_code = response.text.replace("```python", "").replace("```", "").strip()
-
-            with st.chat_message("assistant"):
-                st.code(generated_code, language="python")  # Show code Gemini generated
 
             # Run the generated code safely
             local_vars = {"csv_data": csv_data}
             exec(textwrap.dedent(generated_code), {}, local_vars)
 
-            # Display the final answer
+            # Extract and display the answer
             answer = local_vars.get("ANSWER", "No result found.")
             with st.chat_message("assistant"):
                 if isinstance(answer, pd.DataFrame):
@@ -119,8 +116,22 @@ Use `exec()` and save the final result in a variable called `ANSWER`.
                 else:
                     st.markdown(f"**Result:** {answer}")
 
+            # Ask Gemini to summarize the result in natural language
+            explain_the_results = f"""
+The user asked: {prompt}
+Here is the result: {answer}
+
+Now, explain the answer clearly.
+Summarize the result and include your opinion on the customer's persona based on the data.
+"""
+
+            explanation = st.session_state.chat.send_message(explain_the_results)
+            with st.chat_message("assistant"):
+                st.markdown(explanation.text)
+
         except Exception as e:
-            st.error(f"❌ Error executing Gemini code: {e}")
+            st.error(f"❌ Error executing or interpreting Gemini code: {e}")
 
     else:
-        st.warning("Please upload a CSV file to get started.")
+        st.warning("⚠️ Please upload a CSV file to get started.")
+
