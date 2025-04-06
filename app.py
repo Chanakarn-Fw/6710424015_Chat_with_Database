@@ -24,6 +24,12 @@ if gemini_api_key:
 # Session state init
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+    
+# Loop and display each message from chat history
+if "chat" in st.session_state:
+    for message in st.session_state.chat.history:
+        with st.chat_message(role_to_streamlit(message.role)):
+            st.markdown(message.parts[0].text)
 
 if "dataframe" not in st.session_state:
     st.session_state.dataframe = None
