@@ -15,10 +15,7 @@ try:
     model = genai.GenerativeModel('gemini-2.0-flash-lite')
 
     if "chat" not in st.session_state:
-        st.session_state.chat = model.start_chat(history=[])
-
-    def role_to_streamlit(role):
-        return "assistant" if role == "model" else role
+        st.session_state.chat_history = []  # Use a simpler chat history format
 
 except Exception as e:
     st.error(f"Error initializing Gemini: {e}")
@@ -57,15 +54,16 @@ if dict_file:
         st.error(f"Failed to read dictionary: {e}")
 
 # === CHAT HISTORY LOOP ===
-for msg in st.session_state.chat.history:
-    with st.chat_message(role_to_streamlit(msg.role)):
-        st.markdown(msg.parts[0].text)
-
-# === CHAT INPUT ===
 def safe_text(text):
     return text.encode('utf-8', 'ignore').decode('utf-8')
 
+for role, message in st.session_state.chat_history:
+    with st.chat_message(role):
+        st.markdown(safe_text(message))
+
+# === CHAT INPUT ===
 if prompt := st.chat_input("Ask Gemini something about your data..."):
+    st.session_state.chat_history.append(("user", prompt))
     with st.chat_message("user"):
         st.markdown(safe_text(prompt))
 
@@ -77,7 +75,6 @@ if prompt := st.chat_input("Ask Gemini something about your data..."):
             dict_text = st.session_state.dictionary or "No dictionary provided."
             df_name = "csv_data"
 
-            # 1. Prompt Gemini to generate Python code
             full_prompt = f"""
 You are a Python data assistant.
 You will be given:
@@ -106,19 +103,16 @@ Use `exec()` and save the final result in a variable called `ANSWER`.
             response = model.generate_content(full_prompt)
             generated_code = response.text.replace("```python", "").replace("```", "").strip()
 
-            # 2. Execute code
             local_vars = {"csv_data": csv_data}
             exec(textwrap.dedent(generated_code), {}, local_vars)
             answer = local_vars.get("ANSWER", "No result found.")
 
-            # 3. Display answer
             with st.chat_message("assistant"):
                 if isinstance(answer, pd.DataFrame):
                     st.dataframe(answer)
                 else:
                     st.markdown(f"**Result:** {safe_text(str(answer))}")
 
-            # 4. Ask Gemini to summarize the result naturally
             explain_prompt = f"""
 The user asked: {prompt}
 Here is the result: {answer}
@@ -130,9 +124,8 @@ Summarize the result and include your opinion on the customer's persona based on
             with st.chat_message("assistant"):
                 st.markdown(safe_text(explanation.text))
 
-            # 5. Save clean chat history (only prompt and summary, not code)
-            st.session_state.chat.history.append({"role": "user", "parts": [{"text": safe_text(prompt)}]})
-            st.session_state.chat.history.append({"role": "model", "parts": [{"text": safe_text(str(answer))}]})
+            st.session_state.chat_history.append(("assistant", str(answer)))
+            st.session_state.chat_history.append(("assistant", explanation.text))
 
         except Exception as e:
             st.error(f"Error executing or interpreting Gemini code: {e}")
