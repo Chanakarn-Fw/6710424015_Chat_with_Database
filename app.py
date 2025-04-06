@@ -1,17 +1,18 @@
 import streamlit as st
 import pandas as pd
 import google.generativeai as genai
- 
+import textwrap
+
 # Page config
 st.set_page_config(page_title="📊 CSV Chatbot with Gemini", layout="wide")
- 
-st.title("My Chatbot and Data Analysis App 😁")
+
+st.title("📊 Chat with Your CSV using Gemini 😁")
 st.write("Upload your dataset and ask questions in natural language!")
- 
-# API Key input
+
+# Load API key
 gemini_api_key = st.secrets['gemini_api_key']
 model = None
- 
+
 if gemini_api_key:
     try:
         genai.configure(api_key=gemini_api_key)
@@ -19,34 +20,33 @@ if gemini_api_key:
         st.success("✅ Gemini API Key configured.")
     except Exception as e:
         st.error(f"❌ Failed to configure Gemini: {e}")
- 
+
 # Session state init
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
- 
+
 if "dataframe" not in st.session_state:
     st.session_state.dataframe = None
- 
+
 if "dictionary" not in st.session_state:
     st.session_state.dictionary = None
- 
+
 # File upload
 st.subheader("📤 Upload CSV and Optional Dictionary")
- 
-data_file = st.file_uploader("Upload Data Transation", type=["csv"])
-dict_file = st.file_uploader("Upload Data Dictionary", type=["csv", "txt"])
- 
+
+data_file = st.file_uploader("Upload Data CSV", type=["csv"])
+dict_file = st.file_uploader("Upload Data Dictionary (CSV or TXT)", type=["csv", "txt"])
+
 # Load files
 if data_file:
     try:
         df = pd.read_csv(data_file)
         st.session_state.dataframe = df
         st.success("✅ Data loaded")
-        st.write("### Preview of Data")
         st.dataframe(df.head())
     except Exception as e:
         st.error(f"❌ Error reading data file: {e}")
- 
+
 if dict_file:
     try:
         if dict_file.name.endswith(".csv"):
@@ -58,80 +58,67 @@ if dict_file:
         st.success("📘 Dictionary loaded")
     except Exception as e:
         st.error(f"❌ Error reading dictionary file: {e}")
- 
-# Chat input
-st.subheader("💬 Ask Questions About Your Data")
- 
+
+# Ask questions
+st.subheader("💬 Ask About Your Data")
+
 if prompt := st.chat_input("Ask me anything about your data..."):
-    # Display user message
     st.session_state.chat_history.append(("user", prompt))
     st.chat_message("user").markdown(prompt)
- 
+
     if model and st.session_state.dataframe is not None:
         try:
-            # Build context for Gemini: data + dictionary
-            df_desc = st.session_state.dataframe.describe(include='all').to_string()
-            sample_data = st.session_state.dataframe.head(3).to_string()
-            dict_info = st.session_state.dictionary or "No dictionary provided."
- 
-            
-            system_prompt = f"""
-            You are a helpful Python code generator.
-            Your goal is to write Python code snippets based on the user's question
-            and the provided DataFrame information.
+            df_name = "csv_data"
+            st.session_state.dataframe.columns = st.session_state.dataframe.columns.str.strip()
+            csv_data = st.session_state.dataframe
+            csv_description = csv_data.describe(include='all').fillna("").to_string()
+            sample_data = csv_data.head(3).to_string()
+            dictionary = st.session_state.dictionary or "No dictionary provided."
 
-            Here's the context:
-            
-            **User Question:**
-            {question}
-            
-            **DataFrame Name:**
-            {df_name}
-            
-            **DataFrame Details:**
-            {data_dict_text}
-            
-            **Sample Data (Top 2 Rows):**
-            {example_record}
-            
-            **Instructions:**
-            1. Write Python code that addresses the user's question by querying or manipulating the DataFrame.
-            2. **Crucially, use the `exec()` function to execute the generated code.**
-            3. Do not import pandas.
-            4. Change date column type to datetime.
-            5. **Store the result of the executed code in a variable named `ANSWER`.**
-               This variable should hold the answer to the user's question (e.g., a filtered DataFrame, a calculated value, etc.).
-            6. Assume the DataFrame is already loaded into a pandas DataFrame object named `{df_name}`.
-            7. Keep the generated code concise and focused on answering the question.
-            8. If the question requires a specific output format (e.g., a list, a single value), ensure the `ANSWER` variable holds that format.
-            
-            **Example:**
-            If the user asks: "Show me the rows where the 'age' column is greater than 30." 
-            And the DataFrame has an 'age' column.
-            
-            The generated code should look like this (inside the `exec()` string):
-            
-            '''python
-            query_result = {df_name}[{df_name}['age'] > 30]
-            """
-  
-             response = model.generate_content(prompt)
-             to_markdown(response.text)
-             
-             query = response.text.replace("```", "#")
-             exec(query)
-  
-             st.session_state.chat_history.append(("assistant", answer))
-             st.chat_message("assistant").markdown(answer)
+            # Prompt to Gemini
+            full_prompt = f"""
+You are a helpful Python code generator.
 
-             explain_the_results = f'''
-             the user asked {question},
-             here is the results {ANSWER}
-             answer the question and summarize the answer,
-             include your opinions of the persona of this customer
-             '''
-  
-         except Exception as e:
-             st.error(f"⚠️ Error generating response: {e}")
+User uploaded a DataFrame called `{df_name}`.
+
+**Data Dictionary (if any):**
+{dictionary}
+
+**Data Description:**
+{csv_description}
+
+**Sample Rows:**
+{sample_data}
+
+Now, answer this question from the user:  
+"{prompt}"
+
+Write Python code to solve it.  
+- Store the result in a variable named ANSWER.  
+- Do not import pandas.  
+- Assume `{df_name}` is already loaded.
+"""
+
+            response = model.generate_content(full_prompt)
+            code = response.text.replace("```python", "").replace("```", "")
+            query = textwrap.dedent(code)
+
+            local_vars = {df_name: csv_data}
+
+            # Execute the generated code
+            exec(query, {}, local_vars)
+
+            # Retrieve the result
+            answer = local_vars.get("ANSWER", "No ANSWER returned.")
+
+            # Display result
+            st.chat_message("assistant").markdown(f"**Answer:**\n{answer}")
+            st.session_state.chat_history.append(("assistant", str(answer)))
+
+        except Exception as e:
+            st.error(f"⚠️ Error during code execution: {e}")
+
     else:
-        st.warning("⚠️ Please upload a CSV file and enter a valid API key.")
+        st.warning("⚠️ Please upload a CSV file and ensure the API key is valid.")
+
+
