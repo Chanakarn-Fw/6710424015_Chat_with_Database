@@ -70,7 +70,10 @@ if prompt := st.chat_input("Ask Gemini something about your data..."):
         st.markdown(safe_text(prompt))
 
     df = st.session_state.dataframe
-    if df is not None:
+    analyze_keywords = ["ยอด", "ขาย", "เฉลี่ย", "category", "ยอดขาย", "transaction", "top", "store", "vendor", "item", "รวม", "total"]
+    is_data_question = any(word in prompt.lower() for word in analyze_keywords)
+
+    if df is not None and is_data_question:
         try:
             sample = df.head(2).to_string()
             stats = df.describe(include="all").to_string()
@@ -133,4 +136,11 @@ Summarize the result and include your opinion on the customer's persona based on
             st.error(f"Error executing or interpreting Gemini code: {e}")
 
     else:
-        st.warning("Please upload a CSV file to get started.")
+        try:
+            response = model.generate_content(prompt)
+            reply = response.text
+            with st.chat_message("assistant"):
+                st.markdown(safe_text(reply))
+            st.session_state.chat_history.append(("assistant", reply))
+        except Exception as e:
+            st.error(f"Error generating general response: {e}")
