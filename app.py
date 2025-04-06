@@ -15,7 +15,7 @@ if gemini_api_key:
 
     try:
         # Configure Gemini with the provided API Key
-        genai.configure(api_key=key)
+        genai.configure(api_key=gemini_api_key)
         model = genai.GenerativeModel("gemini-2.0-flash-lite")
         st.success("Gemini API Key successfully configured.")
 
