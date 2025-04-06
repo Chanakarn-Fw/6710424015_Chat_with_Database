@@ -14,8 +14,8 @@ try:
     genai.configure(api_key=key)
     model = genai.GenerativeModel('gemini-2.0-flash-lite')
 
-    if "chat" not in st.session_state:
-        st.session_state.chat_history = []  # Use a simpler chat history format
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []  # Simple history as list of tuples
 
 except Exception as e:
     st.error(f"Error initializing Gemini: {e}")
@@ -57,9 +57,11 @@ if dict_file:
 def safe_text(text):
     return text.encode('utf-8', 'ignore').decode('utf-8')
 
-for role, message in st.session_state.chat_history:
-    with st.chat_message(role):
-        st.markdown(safe_text(message))
+if st.session_state.dictionary:
+    st.subheader("Conversation History")
+    for role, message in st.session_state.chat_history:
+        with st.chat_message(role):
+            st.markdown(safe_text(message))
 
 # === CHAT INPUT ===
 if prompt := st.chat_input("Ask Gemini something about your data..."):
