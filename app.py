@@ -5,7 +5,7 @@ import textwrap
 
 # === CONFIG ===
 st.set_page_config(page_title="Gemini CSV Analyst", layout="wide")
-st.title("CSV + Gemini: Ask Anything About Your Data")
+st.title("Chat with Gemini")
 st.caption("Upload a dataset, ask questions in natural language, and get real answers.")
 
 # === API SETUP ===
